@@ -1,0 +1,255 @@
+/* Basic reset and layout */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Container layout */
+.container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background-color: #f5f5f5;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #555;
+    font-weight: 600;
+}
+
+/* File tree */
+.file-tree {
+    font-size: 14px;
+}
+
+.directory {
+    margin: 4px 0;
+}
+
+.directory summary {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    user-select: none;
+}
+
+.directory summary:hover {
+    background-color: #e8e8e8;
+}
+
+.directory-content {
+    margin-left: 20px;
+}
+
+.file {
+    margin: 2px 0;
+}
+
+.file a {
+    display: block;
+    padding: 4px 8px;
+    text-decoration: none;
+    color: #333;
+    border-radius: 4px;
+}
+
+.file a:hover {
+    background-color: #e8e8e8;
+}
+
+.file a.current {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Main content */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Markdown content styling */
+#rendered-content {
+    color: #24292e;
+}
+
+#rendered-content h1 {
+    font-size: 2em;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid #eaecef;
+}
+
+#rendered-content h2 {
+    font-size: 1.5em;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid #eaecef;
+}
+
+#rendered-content h3 {
+    font-size: 1.25em;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+#rendered-content h4, #rendered-content h5, #rendered-content h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+#rendered-content p {
+    margin-bottom: 16px;
+}
+
+#rendered-content ul, #rendered-content ol {
+    margin-bottom: 16px;
+    padding-left: 2em;
+}
+
+#rendered-content li {
+    margin-bottom: 4px;
+}
+
+#rendered-content code {
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: rgba(27,31,35,0.05);
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+#rendered-content pre {
+    margin-bottom: 16px;
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    background-color: #f6f8fa;
+    border-radius: 6px;
+}
+
+#rendered-content pre code {
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    border-radius: 0;
+    font-size: 100%;
+}
+
+#rendered-content blockquote {
+    padding: 0 1em;
+    color: #6a737d;
+    border-left: 0.25em solid #dfe2e5;
+    margin-bottom: 16px;
+}
+
+#rendered-content table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+#rendered-content table th {
+    font-weight: 600;
+    padding: 6px 13px;
+    border: 1px solid #dfe2e5;
+    background-color: #f6f8fa;
+}
+
+#rendered-content table td {
+    padding: 6px 13px;
+    border: 1px solid #dfe2e5;
+}
+
+#rendered-content table tr:nth-child(2n) {
+    background-color: #f6f8fa;
+}
+
+#rendered-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+#rendered-content a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+#rendered-content a:hover {
+    text-decoration: underline;
+}
+
+/* Mermaid diagrams */
+.mermaid {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.mermaid-error {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    color: #c00;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        max-height: 40vh;
+    }
+    
+    .content {
+        padding: 20px;
+    }
+}

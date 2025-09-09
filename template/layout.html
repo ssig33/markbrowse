@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - MarkBrowse</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>Files</h2>
+            <nav class="file-tree">
+                {{range .Files}}
+                    {{template "fileNode" .}}
+                {{end}}
+            </nav>
+        </aside>
+        
+        <main class="content">
+            <div id="markdown-container">
+                <pre id="markdown-content" style="display: none;">{{.Content}}</pre>
+                <div id="rendered-content"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+
+{{define "fileNode"}}
+    {{if .IsDir}}
+        <details class="directory" open>
+            <summary>📁 {{.Name}}</summary>
+            <div class="directory-content">
+                {{range .Children}}
+                    {{template "fileNode" .}}
+                {{end}}
+            </div>
+        </details>
+    {{else}}
+        <div class="file">
+            <a href="/{{.Path}}">📄 {{.Name}}</a>
+        </div>
+    {{end}}
+{{end}}

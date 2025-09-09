@@ -1,0 +1,12 @@
+- A CLI tool implemented in Go
+- Launch it like `markbrowse ./`
+- You can specify the port number with `--port`
+- Once the tool starts, it can display Markdown files as HTML within the specified directory
+  - Rendering is handled by the frontend
+    - Libraries are likely loaded via `https://www.jsdelivr.com/`
+- Mermaid is rendered
+  - Features a sidebar and main area
+    - The sidebar displays the file list
+    - The main area shows the Markdown converted to HTML
+- index.md or README.md is displayed as the directory index
+- Includes extremely minimal, basic tests
