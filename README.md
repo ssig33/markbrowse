@@ -1,5 +1,7 @@
 # MarkBrowse
 
+[![Image from Gyazo](https://i.gyazo.com/ca8f00eea4b042a10ca1d099a60f2867.png)](https://gyazo.com/ca8f00eea4b042a10ca1d099a60f2867)
+
 A simple CLI tool to browse Markdown files via a web interface.
 
 ## Installation
