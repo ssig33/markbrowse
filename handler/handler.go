@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 // Handler handles HTTP requests
@@ -19,6 +21,7 @@ type Handler struct {
 	templateFS embed.FS
 	staticFS   embed.FS
 	template   *template.Template
+	gitignore  *gitignore.GitIgnore
 }
 
 // FileInfo represents a file in the sidebar
@@ -44,11 +47,19 @@ func New(rootDir string, templateFS, staticFS embed.FS) *Handler {
 		panic(fmt.Sprintf("Failed to parse template: %v", err))
 	}
 
+	// Load .gitignore if it exists
+	var gi *gitignore.GitIgnore
+	gitignorePath := filepath.Join(rootDir, ".gitignore")
+	if _, err := os.Stat(gitignorePath); err == nil {
+		gi, _ = gitignore.CompileIgnoreFile(gitignorePath)
+	}
+
 	return &Handler{
 		rootDir:    rootDir,
 		templateFS: templateFS,
 		staticFS:   staticFS,
 		template:   tmpl,
+		gitignore:  gi,
 	}
 }
 
@@ -158,7 +169,7 @@ func (h *Handler) getFileListRecursive(dir, prefix string) []FileInfo {
 	var files []FileInfo
 	for _, entry := range entries {
 		name := entry.Name()
-		
+
 		// Skip hidden files and directories
 		if strings.HasPrefix(name, ".") {
 			continue
@@ -166,6 +177,11 @@ func (h *Handler) getFileListRecursive(dir, prefix string) []FileInfo {
 
 		fullPath := filepath.Join(dir, name)
 		urlPath := path.Join(prefix, name)
+
+		// Skip files/directories matching .gitignore patterns
+		if h.gitignore != nil && h.gitignore.MatchesPath(urlPath) {
+			continue
+		}
 
 		if entry.IsDir() {
 			children := h.getFileListRecursive(fullPath, urlPath)
