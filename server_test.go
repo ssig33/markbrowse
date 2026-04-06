@@ -1,10 +1,14 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ssig33/markbrowse/handler"
 )
 
 func TestFileOperations(t *testing.T) {
@@ -111,5 +115,79 @@ func TestIndexFileSelection(t *testing.T) {
 	
 	if selectedFile != "index.md" {
 		t.Errorf("Should prefer index.md when both exist, got %s", selectedFile)
+	}
+}
+
+func TestRedirectWhenNoReadme(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a markdown file that is not index.md or README.md
+	os.WriteFile(filepath.Join(tmpDir, "guide.md"), []byte("# Guide"), 0644)
+
+	h := handler.New(tmpDir, templateFS, staticFS)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302 redirect, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if loc != "/guide.md" {
+		t.Errorf("expected redirect to /guide.md, got %s", loc)
+	}
+}
+
+func TestRedirectPicksFirstAlphabetically(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.WriteFile(filepath.Join(tmpDir, "beta.md"), []byte("# Beta"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "alpha.md"), []byte("# Alpha"), 0644)
+
+	h := handler.New(tmpDir, templateFS, staticFS)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302 redirect, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if loc != "/alpha.md" {
+		t.Errorf("expected redirect to /alpha.md, got %s", loc)
+	}
+}
+
+func TestNoMarkdownShowsError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	h := handler.New(tmpDir, templateFS, staticFS)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusFound {
+		t.Fatal("should not redirect when no markdown files exist")
+	}
+}
+
+func TestReadmeStillPreferred(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.WriteFile(filepath.Join(tmpDir, "README.md"), []byte("# README"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "other.md"), []byte("# Other"), 0644)
+
+	h := handler.New(tmpDir, templateFS, staticFS)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	// Should serve README.md directly (200), not redirect
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 when README.md exists, got %d", rec.Code)
 	}
 }

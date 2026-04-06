@@ -93,8 +93,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if _, err := os.Stat(readmePath); err == nil {
 				filePath = readmePath
 			} else {
-				// No index file found
-				h.renderError(w, "No index.md or README.md found in this directory")
+				// No index file found, redirect to first available markdown
+				dirPrefix := strings.TrimPrefix(filePath, h.rootDir)
+				dirPrefix = strings.TrimPrefix(dirPrefix, string(filepath.Separator))
+				localFiles := h.getFileListRecursive(filePath, dirPrefix)
+				if first := findFirstMarkdown(localFiles); first != "" {
+					http.Redirect(w, r, "/"+first, http.StatusFound)
+					return
+				}
+				h.renderError(w, "No markdown files found in this directory")
 				return
 			}
 		}
@@ -211,6 +218,19 @@ func (h *Handler) getFileListRecursive(dir, prefix string) []FileInfo {
 	})
 
 	return files
+}
+
+// findFirstMarkdown returns the path of the first markdown file in the tree
+func findFirstMarkdown(files []FileInfo) string {
+	for _, f := range files {
+		if !f.IsDir {
+			return f.Path
+		}
+		if child := findFirstMarkdown(f.Children); child != "" {
+			return child
+		}
+	}
+	return ""
 }
 
 // renderError renders an error page
