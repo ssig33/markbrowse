@@ -268,6 +268,30 @@ func TestGitChanges(t *testing.T) {
 	if strings.Contains(branch, "stable.md") {
 		t.Error("branch list should not contain files outside the served directory")
 	}
+
+	// A branch stacked on another branch has no changes of its own yet
+	runGit(t, tmpDir, "checkout", "-b", "stacked")
+	body = getBody(t, tmpDir, "/")
+	if strings.Contains(body, "<h2>Changed in") {
+		t.Error("branch without its own commits should not show branch changes")
+	}
+
+	// Only the changes made on the stacked branch itself are listed
+	os.WriteFile(filepath.Join(tmpDir, "stacked.md"), []byte("# Stacked"), 0644)
+	runGit(t, tmpDir, "add", "stacked.md")
+	runGit(t, tmpDir, "commit", "-m", "stacked work")
+	body = getBody(t, tmpDir, "/")
+	branch = sidebarSection(body, "<h2>Changed in stacked</h2>")
+	for _, want := range []string{`href="/stacked.md"`, "compared to feature"} {
+		if !strings.Contains(branch, want) {
+			t.Errorf("stacked branch list should contain %s", want)
+		}
+	}
+	for _, unwanted := range []string{`href="/stable.md"`, `href="/docs/draft.md"`} {
+		if strings.Contains(branch, unwanted) {
+			t.Errorf("stacked branch list should not contain %s from the parent branch", unwanted)
+		}
+	}
 }
 
 func TestReadmeStillPreferred(t *testing.T) {

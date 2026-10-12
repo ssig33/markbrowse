@@ -21,10 +21,10 @@
                     </nav>
                 </section>
             {{end}}
-            {{if .Git.BranchFiles}}
+            {{if .Git.BranchFiles}}{{/* files changed since the current branch started */}}
                 <section class="changes">
                     <h2>Changed in {{.Git.Branch}}</h2>
-                    <p class="changes-base">compared to {{.Git.BaseBranch}}</p>
+                    <p class="changes-base">compared to {{.Git.Base}}</p>
                     <nav class="file-tree">
                         {{range .Git.BranchFiles}}
                             {{template "changedFile" .}}

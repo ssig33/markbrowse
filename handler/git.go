@@ -16,7 +16,7 @@ type ChangedFile struct {
 // GitChanges holds the git change lists shown in the sidebar
 type GitChanges struct {
 	Branch      string
-	BaseBranch  string
+	Base        string
 	BranchFiles []ChangedFile
 	Uncommitted []ChangedFile
 }
@@ -45,56 +45,75 @@ func (h *Handler) getGitChanges() GitChanges {
 
 	changes.Uncommitted = h.uncommittedFiles()
 
-	base, refs := h.defaultBranch()
 	branch := h.gitLine("symbolic-ref", "--short", "-q", "HEAD")
-	if len(refs) == 0 || branch == base {
+	if branch != "" && branch == h.defaultBranch() {
 		return changes
 	}
-	if branch == "" {
-		// Detached HEAD
-		branch = h.gitLine("rev-parse", "--short", "HEAD")
+
+	refs := h.parentRefs(branch)
+	if len(refs) == 0 {
+		return changes
 	}
 
-	// Use the newest commit shared with the local or remote default branch
+	// The newest commit shared with any other branch is where this branch started
 	mergeBase := h.gitLine(append([]string{"merge-base", "HEAD"}, refs...)...)
 	if mergeBase == "" {
 		return changes
 	}
 
+	if branch == "" {
+		// Detached HEAD
+		branch = h.gitLine("rev-parse", "--short", "HEAD")
+	}
 	changes.Branch = branch
-	changes.BaseBranch = base
+	changes.Base = h.baseName(mergeBase)
 	changes.BranchFiles = h.branchFiles(mergeBase)
 	return changes
 }
 
-// defaultBranch returns the default branch name and the existing refs pointing to it
-func (h *Handler) defaultBranch() (string, []string) {
+// defaultBranch returns the default branch name, or "" if it cannot be determined
+func (h *Handler) defaultBranch() string {
 	name := strings.TrimPrefix(h.gitLine("symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD"), "origin/")
-	if name == "" {
-		for _, candidate := range []string{"main", "master"} {
-			if h.refExists("refs/heads/" + candidate) {
-				name = candidate
-				break
-			}
+	if name != "" {
+		return name
+	}
+	for _, candidate := range []string{"main", "master"} {
+		if _, err := h.git("rev-parse", "--verify", "-q", "refs/heads/"+candidate); err == nil {
+			return candidate
 		}
 	}
-	if name == "" {
-		return "", nil
-	}
+	return ""
+}
 
+// parentRefs returns the branches the current branch may have been started from.
+// Branches ahead of HEAD are treated as descendants and skipped, as are the
+// current branch itself and its remote counterparts.
+func (h *Handler) parentRefs(branch string) []string {
 	var refs []string
-	for _, ref := range []string{"refs/heads/" + name, "refs/remotes/origin/" + name} {
-		if h.refExists(ref) {
+	for _, filter := range []string{"--points-at=HEAD", "--no-contains=HEAD"} {
+		out := h.gitLine("for-each-ref", filter, "--format=%(refname)", "refs/heads", "refs/remotes")
+		for _, ref := range strings.Fields(out) {
+			if branch != "" {
+				if ref == "refs/heads/"+branch {
+					continue
+				}
+				if _, name, _ := strings.Cut(strings.TrimPrefix(ref, "refs/remotes/"), "/"); strings.HasPrefix(ref, "refs/remotes/") && name == branch {
+					continue
+				}
+			}
 			refs = append(refs, ref)
 		}
 	}
-	return name, refs
+	return refs
 }
 
-// refExists reports whether the given ref exists
-func (h *Handler) refExists(ref string) bool {
-	_, err := h.git("rev-parse", "--verify", "-q", ref)
-	return err == nil
+// baseName returns a branch name pointing at the commit, or its short hash
+func (h *Handler) baseName(commit string) string {
+	names := strings.Fields(h.gitLine("for-each-ref", "--points-at="+commit, "--format=%(refname:short)", "refs/heads"))
+	if len(names) > 0 {
+		return names[0]
+	}
+	return h.gitLine("rev-parse", "--short", commit)
 }
 
 // branchFiles lists markdown files added or modified between mergeBase and HEAD

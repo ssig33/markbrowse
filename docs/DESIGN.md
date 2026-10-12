@@ -10,6 +10,8 @@
     - The main area shows the Markdown converted to HTML
 - When the directory is in a git repository, the sidebar also shows git change lists, obtained by running the `git` command
   - Uncommitted Markdown files are listed on any branch
-  - Markdown files added or modified since the merge base with the default branch are listed when the current branch is not the default branch
+  - Markdown files added or modified on the current branch itself are listed when the current branch is not the default branch
+    - The starting point of the branch is guessed as the newest commit shared with any other branch, so a branch stacked on another branch only lists its own changes
+    - Branches ahead of the current commit are treated as descendants and ignored
 - index.md or README.md is displayed as the directory index
 - Includes extremely minimal, basic tests
