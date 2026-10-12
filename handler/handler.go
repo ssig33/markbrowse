@@ -38,6 +38,7 @@ type PageData struct {
 	Content     string
 	Files       []FileInfo
 	CurrentPath string
+	Git         GitChanges
 }
 
 // New creates a new handler
@@ -129,6 +130,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Content:     string(content),
 		Files:       files,
 		CurrentPath: strings.TrimPrefix(urlPath, "/"),
+		Git:         h.getGitChanges(),
 	}
 
 	// Render template
@@ -239,6 +241,7 @@ func (h *Handler) renderError(w http.ResponseWriter, message string) {
 		Title:   "Error",
 		Content: fmt.Sprintf("# Error\n\n%s", message),
 		Files:   h.getFileList(),
+		Git:     h.getGitChanges(),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

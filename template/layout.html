@@ -11,6 +11,27 @@
 <body>
     <div class="container">
         <aside class="sidebar">
+            {{if .Git.Uncommitted}}
+                <section class="changes">
+                    <h2>Uncommitted</h2>
+                    <nav class="file-tree">
+                        {{range .Git.Uncommitted}}
+                            {{template "changedFile" .}}
+                        {{end}}
+                    </nav>
+                </section>
+            {{end}}
+            {{if .Git.BranchFiles}}
+                <section class="changes">
+                    <h2>Changed in {{.Git.Branch}}</h2>
+                    <p class="changes-base">compared to {{.Git.BaseBranch}}</p>
+                    <nav class="file-tree">
+                        {{range .Git.BranchFiles}}
+                            {{template "changedFile" .}}
+                        {{end}}
+                    </nav>
+                </section>
+            {{end}}
             <h2>Files</h2>
             <nav class="file-tree">
                 {{range .Files}}
@@ -30,6 +51,12 @@
     <script src="/static/app.js"></script>
 </body>
 </html>
+
+{{define "changedFile"}}
+    <div class="file">
+        <a href="/{{.Path}}"><span class="status status-{{.Status}}">{{.Status}}</span>{{.Path}}</a>
+    </div>
+{{end}}
 
 {{define "fileNode"}}
     {{if .IsDir}}

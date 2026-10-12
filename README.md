@@ -29,6 +29,8 @@ markbrowse --port 3000 ./docs
 - Client-side Markdown rendering with marked.js
 - Mermaid diagram support
 - Automatic index.md/README.md detection for directories
+- Lists uncommitted Markdown files in the sidebar when the directory is in a git repository
+- Lists Markdown files added or modified on the current branch when it is not the default branch
 - Single binary distribution with embedded assets
 
 ## Test

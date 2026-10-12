@@ -8,5 +8,8 @@
   - Features a sidebar and main area
     - The sidebar displays the file list
     - The main area shows the Markdown converted to HTML
+- When the directory is in a git repository, the sidebar also shows git change lists, obtained by running the `git` command
+  - Uncommitted Markdown files are listed on any branch
+  - Markdown files added or modified since the merge base with the default branch are listed when the current branch is not the default branch
 - index.md or README.md is displayed as the directory index
 - Includes extremely minimal, basic tests
