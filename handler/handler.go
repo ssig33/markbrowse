@@ -102,7 +102,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/"+first, http.StatusFound)
 					return
 				}
-				h.renderError(w, "No markdown files found in this directory")
+				h.renderError(w, http.StatusNotFound, "No markdown files found in this directory")
 				return
 			}
 		}
@@ -117,7 +117,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Read markdown content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		h.renderError(w, fmt.Sprintf("Error reading file: %v", err))
+		h.renderError(w, http.StatusInternalServerError, fmt.Sprintf("Error reading file: %v", err))
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // serveStatic serves static files from embedded FS
 func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request) {
 	staticPath := strings.TrimPrefix(r.URL.Path, "/")
-	
+
 	// Read from embedded FS
 	content, err := fs.ReadFile(h.staticFS, staticPath)
 	if err != nil {
@@ -235,8 +235,8 @@ func findFirstMarkdown(files []FileInfo) string {
 	return ""
 }
 
-// renderError renders an error page
-func (h *Handler) renderError(w http.ResponseWriter, message string) {
+// renderError renders an error page with the given status code
+func (h *Handler) renderError(w http.ResponseWriter, status int, message string) {
 	pageData := PageData{
 		Title:   "Error",
 		Content: fmt.Sprintf("# Error\n\n%s", message),
@@ -245,6 +245,6 @@ func (h *Handler) renderError(w http.ResponseWriter, message string) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusNotFound)
+	w.WriteHeader(status)
 	h.template.Execute(w, pageData)
 }

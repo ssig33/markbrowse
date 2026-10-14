@@ -14,13 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configure marked options
     marked.setOptions({
         breaks: true,
-        gfm: true,
-        headerIds: true,
-        highlight: function(code, lang) {
-            // Basic syntax highlighting placeholder
-            // Could be enhanced with a library like Prism.js or highlight.js
-            return code;
-        }
+        gfm: true
     });
     
     // Render markdown to HTML
