@@ -12,110 +12,102 @@ import (
 	"github.com/ssig33/markbrowse/handler"
 )
 
-func TestFileOperations(t *testing.T) {
-	// Create a temporary directory for testing
-	tmpDir := t.TempDir()
-
-	// Create test markdown files
-	testFiles := map[string]string{
-		"index.md":         "# Test Index\n\nThis is a test index file.",
-		"README.md":        "# Test README\n\nThis is a test README file.",
-		"test.md":          "# Test File\n\nThis is a test file.",
-		"subfolder/sub.md": "# Subfolder Test\n\nThis is in a subfolder.",
-	}
-
-	for path, content := range testFiles {
-		fullPath := filepath.Join(tmpDir, path)
-		dir := filepath.Dir(fullPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			t.Fatalf("Failed to create directory %s: %v", dir, err)
+// writeFiles creates the files under dir
+func writeFiles(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+	for name, content := range files {
+		fullPath := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+			t.Fatal(err)
 		}
 		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
-			t.Fatalf("Failed to create test file %s: %v", fullPath, err)
+			t.Fatal(err)
 		}
-	}
-
-	// Test that all files were created
-	for path := range testFiles {
-		fullPath := filepath.Join(tmpDir, path)
-		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-			t.Errorf("File %s was not created", path)
-		}
-	}
-
-	// Test directory structure
-	subfolderPath := filepath.Join(tmpDir, "subfolder")
-	info, err := os.Stat(subfolderPath)
-	if err != nil {
-		t.Errorf("Subfolder was not created: %v", err)
-	}
-	if !info.IsDir() {
-		t.Errorf("Subfolder is not a directory")
 	}
 }
 
-func TestMarkdownDetection(t *testing.T) {
-	tests := []struct {
-		filename   string
-		isMarkdown bool
-	}{
-		{"test.md", true},
-		{"README.md", true},
-		{"index.md", true},
-		{"test.txt", false},
-		{"script.js", false},
-		{"style.css", false},
-	}
-
-	for _, tt := range tests {
-		result := strings.HasSuffix(tt.filename, ".md")
-		if result != tt.isMarkdown {
-			t.Errorf("File %s: expected isMarkdown=%v, got %v", tt.filename, tt.isMarkdown, result)
-		}
-	}
+// getStatus requests the path and returns the status code
+func getStatus(dir, path string) int {
+	h := handler.New(dir, templateFS, staticFS)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+	return rec.Code
 }
 
 func TestIndexFileSelection(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  string
+	}{
+		{"only index.md", map[string]string{"index.md": "INDEX_BODY"}, "INDEX_BODY"},
+		{"only README.md", map[string]string{"README.md": "README_BODY"}, "README_BODY"},
+		{"index.md preferred over README.md", map[string]string{"index.md": "INDEX_BODY", "README.md": "README_BODY"}, "INDEX_BODY"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			writeFiles(t, tmpDir, tt.files)
+			if body := getBody(t, tmpDir, "/"); !strings.Contains(body, tt.want) {
+				t.Errorf("expected body to contain %s", tt.want)
+			}
+		})
+	}
+}
+
+func TestServeMarkdownOnly(t *testing.T) {
 	tmpDir := t.TempDir()
+	writeFiles(t, tmpDir, map[string]string{
+		"README.md":      "# README",
+		"notes.txt":      "notes",
+		"sub/page.md":    "SUB_PAGE_BODY",
+		"sub/index.md":   "SUB_INDEX_BODY",
+		"other/guide.md": "# Guide",
+	})
 
-	// Test case 1: Only index.md exists
-	indexPath := filepath.Join(tmpDir, "test1", "index.md")
-	os.MkdirAll(filepath.Dir(indexPath), 0755)
-	os.WriteFile(indexPath, []byte("index content"), 0644)
-
-	// Check that index.md exists
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		t.Error("index.md should exist")
+	if body := getBody(t, tmpDir, "/sub/page.md"); !strings.Contains(body, "SUB_PAGE_BODY") {
+		t.Error("markdown in a subdirectory should be served")
 	}
-
-	// Test case 2: Only README.md exists
-	readmePath := filepath.Join(tmpDir, "test2", "README.md")
-	os.MkdirAll(filepath.Dir(readmePath), 0755)
-	os.WriteFile(readmePath, []byte("readme content"), 0644)
-
-	// Check that README.md exists
-	if _, err := os.Stat(readmePath); os.IsNotExist(err) {
-		t.Error("README.md should exist")
+	if body := getBody(t, tmpDir, "/sub/"); !strings.Contains(body, "SUB_INDEX_BODY") {
+		t.Error("subdirectory should serve its index.md")
 	}
-
-	// Test case 3: Both exist (index.md should be preferred)
-	testDir3 := filepath.Join(tmpDir, "test3")
-	os.MkdirAll(testDir3, 0755)
-	indexPath3 := filepath.Join(testDir3, "index.md")
-	readmePath3 := filepath.Join(testDir3, "README.md")
-	os.WriteFile(indexPath3, []byte("index content"), 0644)
-	os.WriteFile(readmePath3, []byte("readme content"), 0644)
-
-	// Simulate the logic: prefer index.md over README.md
-	var selectedFile string
-	if _, err := os.Stat(indexPath3); err == nil {
-		selectedFile = "index.md"
-	} else if _, err := os.Stat(readmePath3); err == nil {
-		selectedFile = "README.md"
+	for _, p := range []string{"/notes.txt", "/missing.md"} {
+		if code := getStatus(tmpDir, p); code != http.StatusNotFound {
+			t.Errorf("expected 404 for %s, got %d", p, code)
+		}
 	}
+}
 
-	if selectedFile != "index.md" {
-		t.Errorf("Should prefer index.md when both exist, got %s", selectedFile)
+func TestPathOutsideRootNotServed(t *testing.T) {
+	parent := t.TempDir()
+	rootDir := filepath.Join(parent, "root")
+	writeFiles(t, parent, map[string]string{
+		"outside.md":     "# Outside",
+		"root/README.md": "# README",
+	})
+
+	for _, p := range []string{"/../outside.md", "/static/../../outside.md"} {
+		if code := getStatus(rootDir, p); code != http.StatusNotFound {
+			t.Errorf("expected 404 for %s, got %d", p, code)
+		}
+	}
+}
+
+func TestStaticContentType(t *testing.T) {
+	h := handler.New(t.TempDir(), templateFS, staticFS)
+	tests := map[string]string{
+		"/static/style.css": "text/css; charset=utf-8",
+		"/static/app.js":    "text/javascript; charset=utf-8",
+	}
+	for p, want := range tests {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", p, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 for %s, got %d", p, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Type"); got != want {
+			t.Errorf("%s: expected Content-Type %q, got %q", p, want, got)
+		}
 	}
 }
 

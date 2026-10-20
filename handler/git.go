@@ -143,6 +143,16 @@ func (h *Handler) uncommittedFiles() []ChangedFile {
 	prefix := h.gitLine("rev-parse", "--show-prefix")
 
 	var files []ChangedFile
+	for _, f := range parsePorcelain(out, prefix) {
+		files = h.appendChangedFile(files, f.Path, f.Status)
+	}
+	return files
+}
+
+// parsePorcelain parses `git status --porcelain -z --no-renames` output.
+// Each entry is "XY path"; the prefix is stripped from the path.
+func parsePorcelain(out, prefix string) []ChangedFile {
+	var files []ChangedFile
 	for _, entry := range strings.Split(out, "\x00") {
 		if len(entry) < 4 {
 			continue
@@ -152,7 +162,7 @@ func (h *Handler) uncommittedFiles() []ChangedFile {
 		if code == "??" || strings.Contains(code, "A") {
 			status = "A"
 		}
-		files = h.appendChangedFile(files, strings.TrimPrefix(entry[3:], prefix), status)
+		files = append(files, ChangedFile{Path: strings.TrimPrefix(entry[3:], prefix), Status: status})
 	}
 	return files
 }
