@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -66,11 +67,12 @@ func New(rootDir string, templateFS, staticFS embed.FS) *Handler {
 
 // ServeHTTP handles HTTP requests
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	urlPath := r.URL.Path
+	// Clean the path so that ".." cannot escape the root directory
+	urlPath := path.Clean("/" + r.URL.Path)
 
 	// Handle static files
 	if strings.HasPrefix(urlPath, "/static/") {
-		h.serveStatic(w, r)
+		h.serveStatic(w, r, urlPath)
 		return
 	}
 
@@ -141,8 +143,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveStatic serves static files from embedded FS
-func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request) {
-	staticPath := strings.TrimPrefix(r.URL.Path, "/")
+func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, urlPath string) {
+	staticPath := strings.TrimPrefix(urlPath, "/")
 
 	// Read from embedded FS
 	content, err := fs.ReadFile(h.staticFS, staticPath)
@@ -151,13 +153,8 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set content type based on file extension
-	ext := path.Ext(staticPath)
-	switch ext {
-	case ".css":
-		w.Header().Set("Content-Type", "text/css")
-	case ".js":
-		w.Header().Set("Content-Type", "application/javascript")
+	if contentType := mime.TypeByExtension(path.Ext(staticPath)); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
 	}
 
 	w.Write(content)
